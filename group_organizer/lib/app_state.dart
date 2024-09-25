@@ -22,7 +22,7 @@ class ApplicationState extends ChangeNotifier {
   int _attendees = 0;
   int get attendees => _attendees;
   Attending _attending = Attending.unknown;
-  StreamSubscription<DocumentSnapshot>? _attendingSubscription;
+  StreamSubscription<DocumentSnapshot>? _groupSubscription;
   Attending get attending => _attending;
 
   set attending(Attending attending) {
@@ -36,9 +36,9 @@ class ApplicationState extends ChangeNotifier {
     }
   }
 
-  StreamSubscription<QuerySnapshot>? _guestBookSubscription;
-  List<GuestBookMessage> _guestBookMessages = [];
-  List<GuestBookMessage> get guestBookMessages => _guestBookMessages;
+  StreamSubscription<QuerySnapshot>? _chatRoomSubscription;
+  List<GuestBookMessage> _chatMessages = [];
+  List<GuestBookMessage> get guestBookMessages => _chatMessages;
 
   Future<void> init() async {
     await Firebase.initializeApp(
@@ -61,14 +61,14 @@ class ApplicationState extends ChangeNotifier {
       //subscribe to a query over the document collection when the user signs in
       if (user != null) {
         _loggedIn = true;
-        _guestBookSubscription = FirebaseFirestore.instance
-            .collection('guestbook')
+        _chatRoomSubscription = FirebaseFirestore.instance
+            .collection('chatroom')
             .orderBy('timestamp', descending: true)
             .snapshots()
             .listen((snapshot) {
-          _guestBookMessages = [];
+          _chatMessages = [];
           for (final document in snapshot.docs) {
-            _guestBookMessages.add(
+            _chatMessages.add(
               GuestBookMessage(
                 name: document.data()['name'] as String,
                 message: document.data()['text'] as String,
@@ -77,8 +77,8 @@ class ApplicationState extends ChangeNotifier {
           }
           notifyListeners();
         });
-        _attendingSubscription = FirebaseFirestore.instance
-            .collection('attendees')
+        _groupSubscription = FirebaseFirestore.instance
+            .collection('groupMembers')
             .doc(user.uid)
             .snapshots()
             .listen((snapshot) {
@@ -96,21 +96,21 @@ class ApplicationState extends ChangeNotifier {
       } else {
         //unsubscribe when they sign out
         _loggedIn = false;
-        _guestBookMessages = [];
-        _guestBookSubscription?.cancel();
-        _attendingSubscription?.cancel();
+        _chatMessages = [];
+        _chatRoomSubscription?.cancel();
+        _groupSubscription?.cancel();
       }
       notifyListeners();
     });
   }
 
-  Future<DocumentReference> addMessageToGuestBook(String message) {
+  Future<DocumentReference> addMessageToChat(String message) {
     if (!_loggedIn) {
       throw Exception('Must be logged in');
     }
 
     return FirebaseFirestore.instance
-        .collection('guestbook')
+        .collection('chatroom')
         .add(<String, dynamic>{
       'text': message,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
