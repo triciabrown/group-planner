@@ -7,11 +7,8 @@ import 'package:provider/provider.dart';          // new
 import 'package:go_router/go_router.dart';
 
 import 'app_state.dart';                          // new
-import 'guest_book.dart';
 import 'src/authentication.dart';                 // new
 
-import 'src/widgets.dart';
-import 'yes_no_selection.dart';
 
 class WelcomePage extends StatelessWidget{
   const WelcomePage({super.key});

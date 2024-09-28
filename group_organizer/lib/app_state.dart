@@ -8,7 +8,7 @@ import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'firebase_options.dart';
-import 'guest_book_message.dart';   
+import 'chat_message.dart';   
 
 enum Attending { yes, no, unknown }
 
@@ -37,8 +37,8 @@ class ApplicationState extends ChangeNotifier {
   }
 
   StreamSubscription<QuerySnapshot>? _chatRoomSubscription;
-  List<GuestBookMessage> _chatMessages = [];
-  List<GuestBookMessage> get guestBookMessages => _chatMessages;
+  List<ChatMessage> _chatMessages = [];
+  List<ChatMessage> get chatMessages => _chatMessages;
 
   Future<void> init() async {
     await Firebase.initializeApp(
@@ -69,12 +69,12 @@ class ApplicationState extends ChangeNotifier {
           _chatMessages = [];
           for (final document in snapshot.docs) {
             _chatMessages.add(
-              GuestBookMessage(
+              ChatMessage(
                 name: document.data()['name'] as String,
                 message: document.data()['text'] as String,
               ),
             );
-          }
+           }
           notifyListeners();
         });
         _groupSubscription = FirebaseFirestore.instance
