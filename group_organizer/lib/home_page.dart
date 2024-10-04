@@ -1,4 +1,5 @@
 // home_page.dart
+import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -14,14 +15,19 @@ class HomePage extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
-              context.push('/create-group'); // TODO: implement create-group route
+              context.push('create-group'); // TODO: implement create-group route
             },
           ),
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
               // Navigate to the profile page
-              context.push('/profile');
+              //context.pushNamed('profile');
+              //need to implement app bar on profile screen (or scaffold)
+                Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfileScreen()),
+              );
             },
           ),
         ],

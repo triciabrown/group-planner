@@ -19,6 +19,9 @@ class ApplicationState extends ChangeNotifier {
 
   bool _loggedIn = false;
   bool get loggedIn => _loggedIn;
+  bool accountCreated = false;
+  bool onHomePage = false;
+  bool completingSignIn = false;
   int _attendees = 0;
   int get attendees => _attendees;
   Attending _attending = Attending.unknown;
@@ -39,6 +42,8 @@ class ApplicationState extends ChangeNotifier {
   StreamSubscription<QuerySnapshot>? _chatRoomSubscription;
   List<ChatMessage> _chatMessages = [];
   List<ChatMessage> get chatMessages => _chatMessages;
+
+  //bool get completingSignIn => null;
 
   Future<void> init() async {
     await Firebase.initializeApp(

@@ -25,7 +25,7 @@ class AuthFunc extends StatelessWidget {
           padding: const EdgeInsets.only(left: 24, bottom: 8),
           child: StyledButton(
               onPressed: () {
-                !loggedIn ? context.push('/sign-in') : signOut();
+                !loggedIn ? context.pushNamed('/sign-in') : signOut();
               },
               child: const Text('Login')),
         ),
@@ -35,7 +35,7 @@ class AuthFunc extends StatelessWidget {
             padding: const EdgeInsets.only(left: 24, bottom: 8),
             child: StyledButton(
                 onPressed: () {
-                  context.push('/profile');
+                  context.pushNamed('/profile');
                 },
                 child: const Text('Profile')),
           ),
