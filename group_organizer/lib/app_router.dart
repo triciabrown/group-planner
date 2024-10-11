@@ -1,4 +1,6 @@
 // app_router.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
@@ -15,11 +17,11 @@ class AppRouter {
   AppRouter(this.appState);
 
   GoRouter get router => GoRouter(
-    initialLocation: "/welcome-page",
+    initialLocation: "/home-page",
     refreshListenable: appState, // listen to appState changes
     redirect: (context, state) {
-      if (appState.loggedIn && appState.onHomePage){
-        return '/home-page';
+      if (!appState.loggedIn && !appState.onHomePage){
+        return '/welcome-page';
       }
       return null;
     },
@@ -54,6 +56,7 @@ class AppRouter {
 
                 if (state is UserCreated) {
                   user.updateDisplayName(user.email!.split('@')[0]);
+                  createNewUser(user);
                 }
                 if (!user.emailVerified) {
                   user.sendEmailVerification();
@@ -118,6 +121,25 @@ class AppRouter {
       ),
     ],
   );
+
+  Future<void> createNewUser(User user) async {
+    try {
+      final CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
+      DocumentReference newUser = usersCollection.doc(user.uid);
+
+      Map<String,dynamic> userData = {
+        'userId': user.uid,
+        'email': user.email,
+        'displayName': user.displayName,
+        'groupsIds': [], // user has no groups on first creation
+      };
+
+      await newUser.set(userData);
+
+    } catch (e) {
+      print('Error adding group: $e');
+    }
+  }
 
 
 

@@ -2,6 +2,7 @@
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:group_organizer/create_group_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -15,7 +16,15 @@ class HomePage extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
-              context.push('create-group'); // TODO: implement create-group route
+                Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => Scaffold(
+                  appBar: AppBar(
+                    title: const Text('Create New Group'),
+                  ),
+                  body: const CreateGroupPage()),
+                ) 
+              );
             },
           ),
           IconButton(
@@ -26,7 +35,12 @@ class HomePage extends StatelessWidget {
               //need to implement app bar on profile screen (or scaffold)
                 Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                MaterialPageRoute(builder: (context) => Scaffold(
+                  appBar: AppBar(
+                    title: const Text('Profile'),
+                  ),
+                  body: const ProfileScreen()),
+                ) 
               );
             },
           ),
