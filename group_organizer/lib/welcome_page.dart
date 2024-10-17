@@ -1,13 +1,14 @@
 // ignore_for_file: empty_constructor_bodies
 
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart' // new
-    hide EmailAuthProvider, PhoneAuthProvider;    // new
-import 'package:provider/provider.dart';          // new
+import 'package:firebase_auth/firebase_auth.dart'
+    hide EmailAuthProvider, PhoneAuthProvider;
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
-import 'app_state.dart';                          // new
-import 'src/authentication.dart';                 // new
+import 'app_state.dart';
+import 'src/authentication.dart';
+import 'app_state.dart';  
 
 
 class WelcomePage extends StatelessWidget{
@@ -35,26 +36,6 @@ class WelcomePage extends StatelessWidget{
                 color: Colors.white, // Text color for better contrast
               ),
             ),
-            // const SizedBox(height: 40),
-            // const TextField(
-            //   decoration: InputDecoration(
-            //     labelText: 'Email',
-            //     border: OutlineInputBorder(),
-            //     filled: true,
-            //     fillColor: Colors.white, // Fill input with white for visibility
-            //   ),
-            //   keyboardType: TextInputType.emailAddress,
-            // ),
-            // const SizedBox(height: 20),
-            // const TextField(
-            //   decoration: InputDecoration(
-            //     labelText: 'Password',
-            //     border: OutlineInputBorder(),
-            //     filled: true,
-            //     fillColor: Colors.white,
-            //   ),
-            //   obscureText: true,
-            // ),
             const SizedBox(height: 20),
             // Consumer<ApplicationState>(
             // builder: (context, appState, _) => AuthFunc(
@@ -65,6 +46,7 @@ class WelcomePage extends StatelessWidget{
             // ),
             ElevatedButton(
               onPressed: () {
+                Provider.of<ApplicationState>(context, listen: false).setCompleteSignIn(true);
                 context.go("/sign-in");
               },
               child: const Text('Login'),
