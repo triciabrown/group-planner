@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:group_organizer/create_group_page.dart';
+import 'package:group_organizer/group_details_page.dart';
 import 'package:provider/provider.dart';
 
 import 'welcome_page.dart';
@@ -65,6 +66,7 @@ class AppRouter {
                           'Please check your email to verify your email address'));
                   ScaffoldMessenger.of(context).showSnackBar(snackBar);
                 }
+                Provider.of<ApplicationState>(context, listen: false).setCompleteSignIn(false);
                 context.go('/home-page');
               })),
             ],
@@ -113,6 +115,13 @@ class AppRouter {
         path: '/welcome-page',
         builder: (context, state) {
           return const WelcomePage ();
+        },
+      ),
+      GoRoute(
+        path: '/group/:id', // Route for group details
+        builder: (context, state) {
+          String groupId = state.pathParameters['id']!;
+          return GroupDetailsPage(groupId: groupId);
         },
       ),
     ],

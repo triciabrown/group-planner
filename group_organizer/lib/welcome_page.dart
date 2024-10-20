@@ -17,9 +17,6 @@ class WelcomePage extends StatelessWidget{
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Welcome'),
-      ),
       backgroundColor: const Color.fromARGB(255, 110, 129, 236),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

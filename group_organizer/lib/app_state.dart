@@ -108,6 +108,7 @@ class ApplicationState extends ChangeNotifier {
         _chatMessages = [];
         _chatRoomSubscription?.cancel();
         _groupSubscription?.cancel();
+        notifyListeners();
       }
       //notifyListeners();
     });
