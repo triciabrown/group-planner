@@ -117,13 +117,6 @@ class _HomePageState extends State<HomePage> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push('/create-group'); // Navigate to group creation page
-        },
-        tooltip: 'Create Group',
-        child: const Icon(Icons.add),
-      ),
     );
   }
 }
