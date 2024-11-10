@@ -1,11 +1,19 @@
 // group_details_page.dart
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class GroupDetailsPage extends StatelessWidget {
+class GroupDetailsPage extends StatefulWidget {
   final String groupId;
 
   const GroupDetailsPage({Key? key, required this.groupId}) : super(key: key);
+
+  @override
+  _GroupDetailsPageState createState() => _GroupDetailsPageState();
+}
+
+class _GroupDetailsPageState extends State<GroupDetailsPage> {
+late final scaffoldMessenger = ScaffoldMessenger.of(context);
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +22,7 @@ class GroupDetailsPage extends StatelessWidget {
         title: const Text('Group Details'),
       ),
       body: FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance.collection('groups').doc(groupId).get(),
+        future: FirebaseFirestore.instance.collection('groups').doc(widget.groupId).get(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -59,7 +67,7 @@ class GroupDetailsPage extends StatelessWidget {
     );
   }
 
-  // Function to handle inviting a new member with input field for phone/email
+  // Function to handle inviting a new member with input field for email
   void _inviteNewMember(BuildContext context) {
     final TextEditingController contactController = TextEditingController();
 
@@ -94,7 +102,7 @@ class GroupDetailsPage extends StatelessWidget {
                 _sendInvite(context, contact);
                 Navigator.of(context).pop();
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
+                scaffoldMessenger.showSnackBar(
                   const SnackBar(content: Text('Please enter a valid email address.')),
                 );
               }
@@ -109,48 +117,71 @@ class GroupDetailsPage extends StatelessWidget {
 // Method to send an invitation
   Future<void> _sendInvite(BuildContext context, String email) async {
     final usersCollection = FirebaseFirestore.instance.collection('users');
-    
+      
     try {
-      //Check if the user already exists
+      // Check if the user already exists in the users collection
       final querySnapshot = await usersCollection.where('email', isEqualTo: email).limit(1).get();
 
       if (querySnapshot.docs.isNotEmpty) {
-        //If user exists, show a message that they are already a member
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('User with this email is already registered.')),
-        );
-        return;
+        // User exists in Firestore, so add the invite to their record
+        final userDoc = querySnapshot.docs.first.reference;
+
+        String userid = FirebaseAuth.instance.currentUser!.uid;
+
+        final currentUser = await FirebaseFirestore.instance.collection('users').doc(userid).get();
+
+        final currentUserName = currentUser.data()?['displayName'] as String;
+        
+        // Create an invitation object to be stored
+        final invitation = {
+          'groupId': widget.groupId,
+          'invitedBy' : currentUserName,
+          'groupName': await _fetchGroupName(),  // Fetch the group's name (helper function below)
+          'invitedAt': Timestamp.now(),
+        };
+
+        // Use Firestore's arrayUnion to add the invitation to the user's record
+        await userDoc.update({
+          'pendingInvitations': FieldValue.arrayUnion([invitation]),
+        });
+        if(mounted){
+          scaffoldMessenger.showSnackBar(
+            SnackBar(content: Text('Invitation sent to user\'s account.')),
+          );
+        }
+      } else {
+        // If the user does not exist, send an invite email
+        //TODO future implementation since I dont have actual company emails set up
+        //await _sendEmailInvite(email);
+        if (mounted){
+          scaffoldMessenger.showSnackBar(
+            SnackBar(content: Text('$email is not currently a user of FestieBestie')),
+          );
+        }
       }
-
-      // Step 2: If user does not exist, send invite email
-      await _sendEmailInvite(email);
-
-      // Step 3: Optionally, save the invite status in Firestore (e.g., under 'pending_invites' collection)
-      await FirebaseFirestore.instance
-          .collection('groups')
-          .doc(groupId)
-          .collection('pending_invites')
-          .add({'email': email, 'invited_at': Timestamp.now()});
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Invite sent to $email')),
-      );
-
     } catch (e) {
-      // Handle errors
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to send invite: $e')),
-      );
+      // Error handling
+      if (mounted){
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send invite: $e')),
+        );
+      }
     }
   }
 
-  Future<void> _sendEmailInvite(String email) async {
-    // TODO: implement logic for sending email, configure firebase functions backend
+  // Future<void> _sendEmailInvite(String email) async {
+  //   // TODO: implement logic for sending email, configure firebase functions backend
     
-    //final callable = FirebaseFunctions.instance.httpsCallable('sendInviteEmail');
-    //await callable.call({'email': email});
+  //   //final callable = FirebaseFunctions.instance.httpsCallable('sendInviteEmail');
+  //   //await callable.call({'email': email});
     
-    // Temporary print statement as a placeholder
-    print("Sending invite email to $email");
+  //   // Temporary print statement as a placeholder
+  //   print("Sending invite email to $email");
+  // }
+
+  // Helper function to fetch group name by groupId
+  Future<String> _fetchGroupName() async {
+    final groupDoc = await FirebaseFirestore.instance.collection('groups').doc(widget.groupId).get();
+    return groupDoc.exists && groupDoc.data() != null ? groupDoc['name'] as String : 'Unknown Group';
   }
 }
