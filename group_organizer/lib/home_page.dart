@@ -17,6 +17,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   User? user; // current Firebase user
   int pendingInvitesCount = 0; 
+  List<Map<String,String>> pendingInvites = [];
 
   @override
   void initState() {
@@ -35,12 +36,22 @@ class _HomePageState extends State<HomePage> {
         .listen((snapshot) {
       if (snapshot.exists) {
         var userData = snapshot.data() as Map<String, dynamic>;
-        List<dynamic>? pendingInvites = userData['pendingInvitations'] ?? [];
+        var invites = userData['pendingInvitations'] as List<dynamic>? ?? [];
+
+        List<Map<String,String>> formattedInvites = invites.map((invite) {
+          return {
+            'groupName': invite['groupName']?.toString() ?? 'Unknown Group',
+            'invitedBy': invite['invitedBy']?.toString() ?? 'Unknown User',
+            'groupId': invite['groupId']?.toString() ?? '',
+          };
+        }).toList();
         
         // Update pendingInvitesCount based on new invites
-        if (pendingInvites != null){
+
+        if (mounted){
           setState(() {
-            pendingInvitesCount = pendingInvites.length;
+            pendingInvitesCount = formattedInvites.length;
+            pendingInvites = formattedInvites;
           });
         }
       }
@@ -76,7 +87,11 @@ class _HomePageState extends State<HomePage> {
               showBadge: pendingInvitesCount > 0,
               child: const Icon(Icons.notifications),
             ),
-            onPressed: _showInvitesDialog, // Show dialog with pending invites
+            onPressed: () async {
+              if (context.mounted) { 
+                _showInvitesDialog(pendingInvites);
+              }
+            },
           ),
           IconButton(
             icon: const Icon(Icons.add),
@@ -157,35 +172,36 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Show a dialog with pending invites
-  void _showInvitesDialog() {
+  void _showInvitesDialog(List<Map<String,String>> invites) {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: const Text("Pending Group Invites"),
-          content: pendingInvitesCount > 0
+          content: invites.isNotEmpty
               ? SizedBox(
                   height: MediaQuery.of(context).size.height * 0.4, // 40% of screen height
                   width: MediaQuery.of(context).size.width * 0.8, // 80% of screen width
                   child: ListView.builder(
-                    itemCount: pendingInvitesCount,
+                    itemCount: invites.length,
                     itemBuilder: (context, index) {
-                      return ListTile(
-                        title: Text("Invite $index"),
-                        subtitle: const Text("You have been invited to join this group."),
+                      final invite = invites[index];
+                  return ListTile(
+                        title: Text(invite['groupName'] ?? "Unknown group"),
+                        subtitle: Text('Invited by: ${invite['inviterName'] ?? 'Unknown User'}'),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
                               icon: const Icon(Icons.check, color: Colors.green),
                               onPressed: () {
-                                //_acceptInvite(String userId, String groupId)
+                                _acceptInvite(invite['groupId']);
                               },
                             ),
                             IconButton(
                               icon: const Icon(Icons.close, color: Colors.red),
                               onPressed: () {
-                                // Decline invite logic
+                                _declineInvite(invite['groupId']);
                               },
                             ),
                           ],
@@ -206,38 +222,112 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-
-  Future<void> _acceptInvite(String userId, String groupId) async {
-    final userRef = FirebaseFirestore.instance.collection('users').doc(userId);
+  Future<List<Map<String, String>>> fetchPendingInvites() async {
+    List<Map<String, String>> invites = [];
 
     try {
-      // Update the user's document to add the group ID to their 'groups' list
-      await userRef.update({
-        'groups': FieldValue.arrayUnion([FirebaseFirestore.instance.collection('groups').doc(groupId)])
-      });
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return invites;
 
-      // Optional: Remove the pending invite if it's stored in Firestore
-      await FirebaseFirestore.instance
-          .collection('groups')
-          .doc(groupId)
-          .collection('pending_invites')
-          .where('userId', isEqualTo: userId)
-          .get()
-          .then((querySnapshot) {
-        for (var doc in querySnapshot.docs) {
-          doc.reference.delete();  // Remove the invite document after it’s accepted
-        }
-      });
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('pendingInvitations')
+          .get();
 
-      // Feedback to the user (optional)
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Group added to your list.')),
-      );
+      for (var doc in snapshot.docs) {
+        invites.add({
+          'groupName': doc['groupName'] ?? 'Unnamed Group',
+          'invitedBy': doc['invitedBy'] ?? 'Unknown',
+          'groupId': doc['groupId'] ?? 'Unknown'
+        });
+      }
     } catch (e) {
-      // Error handling
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to accept invite: $e')),
-      );
+      print('Error fetching invites: $e');
+    }
+
+    return invites;
+  }
+
+
+  Future<void> _acceptInvite(String? groupId) async {
+    final userRef = FirebaseFirestore.instance.collection('users').doc(user!.uid);
+    final groupRef = FirebaseFirestore.instance.collection('groups').doc(groupId);
+
+    try {
+      // get the current pendingInvitations array
+      DocumentSnapshot userDoc = await userRef.get();
+      List<dynamic> currentInvites = (userDoc.data() as Map<String, dynamic>)['pendingInvitations'] ?? [];
+
+      // Find and remove the specific invite
+      currentInvites.removeWhere((invite) => invite['groupId'] == groupId);
+
+      // Batch write to update both the groups array and pendingInvitations
+      final batch = FirebaseFirestore.instance.batch();
+
+      // Add group to user's groups
+      batch.update(userRef, {
+        'groups': FieldValue.arrayUnion([
+          FirebaseFirestore.instance.collection('groups').doc(groupId)
+        ]),
+        // Update the pendingInvitations with the invite removed
+        'pendingInvitations': currentInvites
+      });
+
+      // Update group document
+      batch.update(groupRef, {
+        'members': FieldValue.arrayUnion([userRef])
+      });
+
+      await batch.commit();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Group invite accepted successfully.')),
+        );
+        Navigator.of(context).pop(); // Close the dialog
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to accept invite: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _declineInvite(String? groupId) async {
+    try {
+      // Get reference to user document
+      final userRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user!.uid);
+
+      // Get current invites
+      DocumentSnapshot userDoc = await userRef.get();
+      List<dynamic> currentInvites = (userDoc.data() as Map<String, dynamic>)['pendingInvitations'] ?? [];
+      
+      // Remove the specific invite
+      currentInvites.removeWhere((invite) => invite['groupId'] == groupId);
+
+      // Update the pendingInvitations array
+      await userRef.update({
+        'pendingInvitations': currentInvites
+      });
+
+      // Update UI feedback
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invite declined')),
+        );
+        Navigator.of(context).pop(); // Close the dialog
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to decline invite: $e')),
+        );
+      }
     }
   }
 }
