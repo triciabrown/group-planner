@@ -2,6 +2,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:group_organizer/todo_list_page.dart'; 
 
 class GroupDetailsPage extends StatefulWidget {
   final String groupId;
@@ -20,6 +21,21 @@ late final scaffoldMessenger = ScaffoldMessenger.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Group Details'),
+        actions: [
+          // Add IconButton for navigation to ToDoListPage
+          IconButton(
+            icon: const Icon(Icons.check_box), // Checkbox icon for the to-do list
+            onPressed: () {
+              // Navigate to ToDoListPage
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ToDoListPage(groupId: widget.groupId),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: FutureBuilder<DocumentSnapshot>(
         future: FirebaseFirestore.instance.collection('groups').doc(widget.groupId).get(),
@@ -32,6 +48,7 @@ late final scaffoldMessenger = ScaffoldMessenger.of(context);
           }
 
           var groupData = snapshot.data!.data() as Map<String, dynamic>;
+          //var members = groupData['members'];
           return Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -45,7 +62,23 @@ late final scaffoldMessenger = ScaffoldMessenger.of(context);
                 Text(
                   'Description: ${groupData['description'] ?? "No description available"}',
                 ),
-                
+                //const SizedBox(height: 16),
+                // const Text(
+                //   'Members',
+                //   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                // ),
+                // Expanded(
+                //   child: ListView.builder(
+                //     itemCount: members.length,
+                //     itemBuilder: (context, index) {
+                //       final member = members[index];
+                //       return ListTile(
+                //         leading: Icon(Icons.person),
+                //         title: Text(member),
+                //       );
+                //     },
+                //   ),
+                // ),
                 const SizedBox(height: 24),  // Spacing before the button
 
                 // Invite Button
@@ -146,7 +179,7 @@ late final scaffoldMessenger = ScaffoldMessenger.of(context);
         });
         if(mounted){
           scaffoldMessenger.showSnackBar(
-            SnackBar(content: Text('Invitation sent to user\'s account.')),
+            const SnackBar(content: Text('Invitation sent to user\'s account.')),
           );
         }
       } else {

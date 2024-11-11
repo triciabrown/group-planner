@@ -87,13 +87,14 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
 Future<void> createNewGroup(String groupName, String groupDescription) async {
   try {
     String userid = FirebaseAuth.instance.currentUser!.uid;
+    String displayName = FirebaseAuth.instance.currentUser!.displayName ?? 'Unknown User';
     final DocumentReference userDoc = usersCollection.doc(userid);
     DocumentReference newGroup = await groupsCollection.add({
       'name': groupName,
       'description': groupDescription,
       'createdAt': FieldValue.serverTimestamp(),
       'createdBy': userid,  // User ID of the creator
-      'members': [userid],  // Add the creator to the members list
+      'members': [{ userid: displayName }],  // Add the creator to the members list
     });
 
     await userDoc.update({
