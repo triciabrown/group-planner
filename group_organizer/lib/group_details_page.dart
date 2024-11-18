@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:group_organizer/todo_list_page.dart'; 
+import 'package:group_organizer/group_calendar_page.dart';
 
 class GroupDetailsPage extends StatefulWidget {
   final String groupId;
@@ -14,7 +15,8 @@ class GroupDetailsPage extends StatefulWidget {
 }
 
 class _GroupDetailsPageState extends State<GroupDetailsPage> {
-late final scaffoldMessenger = ScaffoldMessenger.of(context);
+  late final scaffoldMessenger = ScaffoldMessenger.of(context);
+  final TextEditingController messageController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +24,17 @@ late final scaffoldMessenger = ScaffoldMessenger.of(context);
       appBar: AppBar(
         title: const Text('Group Details'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_today),  // New calendar icon
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => GroupCalendarPage(groupId: widget.groupId),
+                ),
+              );
+            },
+          ),
           // Add IconButton for navigation to ToDoListPage
           IconButton(
             icon: const Icon(Icons.check_box), // Checkbox icon for the to-do list
@@ -55,7 +68,7 @@ late final scaffoldMessenger = ScaffoldMessenger.of(context);
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Group Name: ${groupData['name']}',
+                  '${groupData['name']}',
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
                 const SizedBox(height: 16),
@@ -90,14 +103,126 @@ late final scaffoldMessenger = ScaffoldMessenger.of(context);
                   label: const Text('Invite New Member'),
                 ),
 
-                // Additional group details could go here
-                // e.g., list of members, group rules, etc.
+                //spacer box
+                const SizedBox(height: 16),
+
+                // Chat Section
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Chat',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // StreamBuilder for real-time chat messages
+                      Expanded(
+                        child: StreamBuilder<QuerySnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('groups')
+                              .doc(widget.groupId)
+                              .collection('messages')
+                              .orderBy('timestamp', descending: true)
+                              .snapshots(),
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData) {
+                              return const Center(child: CircularProgressIndicator());
+                            }
+
+                            var messages = snapshot.data!.docs;
+
+                            return ListView.builder(
+                              reverse: true,
+                              itemCount: messages.length,
+                              itemBuilder: (context, index) {
+                                var messageData = messages[index];
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade200,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            messageData['senderName'] ?? 'Unknown User',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: Colors.blueGrey,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            messageData['text'] ?? '',
+                                            style: const TextStyle(fontSize: 16),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+
+                      // Text Field and Send Button for new messages
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: messageController,
+                              decoration: const InputDecoration(
+                                hintText: 'Type a message...',
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.send),
+                            onPressed: _sendMessage,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           );
         },
       ),
     );
+  }
+
+ // Send Message Method 
+  Future<void> _sendMessage() async {
+    final message = messageController.text.trim();
+    if (message.isNotEmpty) {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUser!.uid).get();
+      final senderName = userDoc['displayName'] ?? 'Unknown User';
+
+      FirebaseFirestore.instance
+          .collection('groups')
+          .doc(widget.groupId)
+          .collection('messages')
+          .add({
+        'text': message,
+        'timestamp': Timestamp.now(),
+        'senderId': currentUser.uid,
+        'senderName': senderName,
+      });
+      messageController.clear();
+    }
   }
 
   // Function to handle inviting a new member with input field for email
