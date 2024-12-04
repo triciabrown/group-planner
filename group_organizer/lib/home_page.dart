@@ -151,13 +151,32 @@ class _HomePageState extends State<HomePage> {
               }
               
               var groups = groupSnapshot.data!;
-              return ListView.builder(
+              return ListView.separated(
+                separatorBuilder: (context, index) => Divider(
+                  color: Colors.grey.shade300, // Customizable divider color
+                  thickness: 1, // Thin divider
+                  indent: 16, // Left padding
+                  endIndent: 16, // Right padding
+                ),
                 itemCount: groups.length,
                 itemBuilder: (context, index) {
                   var groupData = groups[index].data() as Map<String, dynamic>;
                   return ListTile(
-                    title: Text(groupData['name'] ?? 'Unnamed Group'), //display group name
-                    subtitle: Text('Group ID: ${groups[index].id}'), // display group ID
+                    title: Text(
+                      groupData['name'] ?? 'Unnamed Group', 
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600, // Slightly bolder
+                        fontSize: 16, // Slightly larger
+                      ),
+                    ),
+                    subtitle: groupData['description'] != null 
+                      ? Text(
+                          groupData['description'], 
+                          maxLines: 1, // Limit to one line
+                          overflow: TextOverflow.ellipsis, // Add ellipsis if too long
+                        )
+                      : null,
+                    trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       context.push('/group/${groups[index].id}');
                     },

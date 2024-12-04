@@ -48,20 +48,6 @@ class WelcomePage extends StatelessWidget{
               },
               child: const Text('Login'),
             ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                const Text("Don't have an account?"),
-                TextButton(
-                  onPressed: () {
-                    // Navigate to CreateAccountPage using GoRouter
-                    context.go('/create-account');
-                  },
-                  child: const Text('Create Account'),
-                ),
-              ],
-            ),
           ],
         ),
       ),
